@@ -1,14 +1,20 @@
 #include "slog.h"
 
 #include <stdio.h>
-#include <io.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <stdarg.h>
-#include <direct.h>
 
 #if defined(WIN32)
+#include <io.h>
+#include <direct.h>
 #include <Windows.h>
 #include <DbgHelp.h>
+#elif defined(linux)
+#include <unistd.h>
+#include <sys/stat.h>
+#include <execinfo.h>
 #endif
 
 #define MAX_LEVEL_STR               (10)
@@ -22,13 +28,12 @@
 #if defined(WIN32)
 	#define snprintf _snprintf
 	#define vsnprintf _vsnprintf
-	#define PROC_HANDLE HANDLE
 #elif defined(linux)
-	#define PROC_HANDLE
+    #define PROC_HANDLE void *
 #endif
 
 typedef struct _logger_cfg {
-	PROC_HANDLE curr_proc;
+    PROC_HANDLE curr_proc;
 	FILE *log_file;
 	slog_level filter_levle;
 	int inited;
@@ -84,11 +89,14 @@ static void _write_stacktrace()
 #define MAX_DEEP           (24)
 #define MAX_ST_INFO        (256)
 #define MAX_ST_LINE        (512)
+
 	unsigned int i = 0;
+    unsigned short frames = 0;
 	void *stack[MAX_DEEP] = { 0 };
-	unsigned short frames = 0;
+    char st_line[MAX_ST_LINE] = { 0 };
+
+#if defined(WIN32)
 	SYMBOL_INFO *symbol = NULL;
-	char st_line[MAX_ST_LINE] = { 0 };
 
 	frames = CaptureStackBackTrace(INNER_DEEP, MAX_DEEP, stack, NULL);
 	symbol = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + sizeof(char) * MAX_ST_INFO, 1);
@@ -96,10 +104,52 @@ static void _write_stacktrace()
 	symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 	for (i = 0; i < frames; ++i) {
 		SymFromAddr(g_logger_cfg.curr_proc, (DWORD64)(stack[i]), 0, symbol);
-		snprintf(st_line, sizeof(st_line) - 1, "    %d: %s 0x%X\n", frames - i - 1, symbol->Name, symbol->Address);
+        snprintf(st_line, sizeof(st_line) - 1, "    %d: %s [0x%X]\n", frames - i - 1, symbol->Name, symbol->Address);
 		fwrite(st_line, sizeof(char), strlen(st_line), g_logger_cfg.log_file);
 	}
+#elif defined(linux)
+    char **st_arr = NULL;
+
+    frames = backtrace(stack, MAX_DEEP);
+    st_arr = backtrace_symbols(stack, frames);
+    for (i = 0; i < frames; ++i) {
+        snprintf(st_line, sizeof(st_line) - 1, "    %d: %s\n", frames - i - 1, st_arr[i]);
+        fwrite(st_line, sizeof(char), strlen(st_line), g_logger_cfg.log_file);
+    }
+    free(st_arr);
+#endif
+
 	fflush(g_logger_cfg.log_file);
+}
+
+static int _slog_mkdir(const char *log_dir)
+{
+#if defined(WIN32)
+    if (mkdir(log_dir) != 0) {
+        return FALSE;
+    }
+#elif defined(linux)
+    if (mkdir(log_dir, 0744) != 0) {
+        return FALSE;
+    }
+#endif
+    return TRUE;
+}
+
+static int _get_curr_proc_handle()
+{
+#if defined(WIN32)
+    g_logger_cfg.curr_proc = GetCurrentProcess();
+    if (NULL == g_logger_cfg.curr_proc) {
+        return FALSE;
+    }
+    if (SymInitialize(g_logger_cfg.curr_proc, NULL, TRUE) != TRUE) {
+        return FALSE;
+    }
+#elif defined(linux)
+    g_logger_cfg.curr_proc = NULL;
+#endif
+    return TRUE;
 }
 
 int init_logger(const char *log_dir, slog_level level)
@@ -110,22 +160,16 @@ int init_logger(const char *log_dir, slog_level level)
 	if (TRUE == g_logger_cfg.inited) {
 		return TRUE;
 	}
-	if (access(log_dir, 0) != 0) {
-		if (mkdir(log_dir) != 0) {
-			return FALSE;
-		}
-	}
-	
-#if defined(WIN32)
-	g_logger_cfg.curr_proc = GetCurrentProcess();
-	if (NULL == g_logger_cfg.curr_proc) {
-		return FALSE;
-	}
-	if (SymInitialize(g_logger_cfg.curr_proc, NULL, TRUE) != TRUE) {
-		return FALSE;
-	}
-#elif defined(linux)
-#endif
+
+    if (access(log_dir, 0) != 0) {
+        if (_slog_mkdir(log_dir) != TRUE) {
+            return FALSE;
+        }
+    }
+
+    if (_get_curr_proc_handle() != TRUE) {
+        return FALSE;
+    }
 	_get_curr_date(sizeof(datestr), datestr);
 	snprintf(log_filepath, sizeof(log_filepath) - 1, "%s/%s.log", log_dir, datestr);
 	g_logger_cfg.log_file = fopen(log_filepath, "a+");
