@@ -26,21 +26,22 @@
 #define MAX_LOG_LINE                (4096)
 
 #if defined(WIN32)
-	#define snprintf _snprintf
-	#define vsnprintf _vsnprintf
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#define PROC_HANDLE HANDLE
 #elif defined(linux)
-    #define PROC_HANDLE void *
+#define PROC_HANDLE void *
 #endif
 
 typedef struct _logger_cfg {
-    PROC_HANDLE curr_proc;
+	PROC_HANDLE curr_proc;
 	FILE *log_file;
 	slog_level filter_levle;
 	int inited;
 } logger_cfg;
 
 static logger_cfg g_logger_cfg = {
-	NULL, NULL, S_INFO, FALSE};
+	NULL, NULL, S_INFO, FALSE };
 
 static void _get_curr_date(int datestr_size, char datestr[])
 {
@@ -53,11 +54,11 @@ static void _get_curr_date(int datestr_size, char datestr[])
 		curr_time->tm_year + 1900, curr_time->tm_mon + 1, curr_time->tm_mday);
 }
 
-static void _get_curr_time(int timestr_size, char timestr[]) 
+static void _get_curr_time(int timestr_size, char timestr[])
 {
-	time_t tt = {0};
+	time_t tt = { 0 };
 	struct tm *curr_time = NULL;
-	
+
 	time(&tt);
 	curr_time = localtime(&tt);
 	snprintf(timestr, timestr_size - 1, TIME_STR_FMT,
@@ -91,9 +92,9 @@ static void _write_stacktrace()
 #define MAX_ST_LINE        (512)
 
 	unsigned int i = 0;
-    unsigned short frames = 0;
+	unsigned short frames = 0;
 	void *stack[MAX_DEEP] = { 0 };
-    char st_line[MAX_ST_LINE] = { 0 };
+	char st_line[MAX_ST_LINE] = { 0 };
 
 #if defined(WIN32)
 	SYMBOL_INFO *symbol = NULL;
@@ -104,19 +105,19 @@ static void _write_stacktrace()
 	symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 	for (i = 0; i < frames; ++i) {
 		SymFromAddr(g_logger_cfg.curr_proc, (DWORD64)(stack[i]), 0, symbol);
-        snprintf(st_line, sizeof(st_line) - 1, "    %d: %s [0x%X]\n", frames - i - 1, symbol->Name, symbol->Address);
+		snprintf(st_line, sizeof(st_line) - 1, "    %d: %s [0x%X]\n", frames - i - 1, symbol->Name, symbol->Address);
 		fwrite(st_line, sizeof(char), strlen(st_line), g_logger_cfg.log_file);
 	}
 #elif defined(linux)
-    char **st_arr = NULL;
+	char **st_arr = NULL;
 
-    frames = backtrace(stack, MAX_DEEP);
-    st_arr = backtrace_symbols(stack, frames);
-    for (i = 0; i < frames; ++i) {
-        snprintf(st_line, sizeof(st_line) - 1, "    %d: %s\n", frames - i - 1, st_arr[i]);
-        fwrite(st_line, sizeof(char), strlen(st_line), g_logger_cfg.log_file);
-    }
-    free(st_arr);
+	frames = backtrace(stack, MAX_DEEP);
+	st_arr = backtrace_symbols(stack, frames);
+	for (i = 0; i < frames; ++i) {
+		snprintf(st_line, sizeof(st_line) - 1, "    %d: %s\n", frames - i - 1, st_arr[i]);
+		fwrite(st_line, sizeof(char), strlen(st_line), g_logger_cfg.log_file);
+	}
+	free(st_arr);
 #endif
 
 	fflush(g_logger_cfg.log_file);
@@ -125,31 +126,31 @@ static void _write_stacktrace()
 static int _slog_mkdir(const char *log_dir)
 {
 #if defined(WIN32)
-    if (mkdir(log_dir) != 0) {
-        return FALSE;
-    }
+	if (mkdir(log_dir) != 0) {
+		return FALSE;
+	}
 #elif defined(linux)
-    if (mkdir(log_dir, 0744) != 0) {
-        return FALSE;
-    }
+	if (mkdir(log_dir, 0744) != 0) {
+		return FALSE;
+	}
 #endif
-    return TRUE;
+	return TRUE;
 }
 
 static int _get_curr_proc_handle()
 {
 #if defined(WIN32)
-    g_logger_cfg.curr_proc = GetCurrentProcess();
-    if (NULL == g_logger_cfg.curr_proc) {
-        return FALSE;
-    }
-    if (SymInitialize(g_logger_cfg.curr_proc, NULL, TRUE) != TRUE) {
-        return FALSE;
-    }
+	g_logger_cfg.curr_proc = GetCurrentProcess();
+	if (NULL == g_logger_cfg.curr_proc) {
+		return FALSE;
+	}
+	if (SymInitialize(g_logger_cfg.curr_proc, NULL, TRUE) != TRUE) {
+		return FALSE;
+	}
 #elif defined(linux)
-    g_logger_cfg.curr_proc = NULL;
+	g_logger_cfg.curr_proc = NULL;
 #endif
-    return TRUE;
+	return TRUE;
 }
 
 int init_logger(const char *log_dir, slog_level level)
@@ -161,15 +162,15 @@ int init_logger(const char *log_dir, slog_level level)
 		return TRUE;
 	}
 
-    if (access(log_dir, 0) != 0) {
-        if (_slog_mkdir(log_dir) != TRUE) {
-            return FALSE;
-        }
-    }
+	if (access(log_dir, 0) != 0) {
+		if (_slog_mkdir(log_dir) != TRUE) {
+			return FALSE;
+		}
+	}
 
-    if (_get_curr_proc_handle() != TRUE) {
-        return FALSE;
-    }
+	if (_get_curr_proc_handle() != TRUE) {
+		return FALSE;
+	}
 	_get_curr_date(sizeof(datestr), datestr);
 	snprintf(log_filepath, sizeof(log_filepath) - 1, "%s/%s.log", log_dir, datestr);
 	g_logger_cfg.log_file = fopen(log_filepath, "a+");
@@ -189,7 +190,7 @@ void write_log(slog_level level, int print_stacktrace, const char *func_name, in
 	char timestr[MAX_TIME_STR] = { 0 };
 	char log_content[MAX_LOG_LINE] = { 0 };
 	char log_line[MAX_LOG_LINE] = { 0 };
-	
+
 	if (g_logger_cfg.filter_levle > level) {
 		return;
 	}
