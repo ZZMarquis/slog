@@ -13,6 +13,7 @@
 #include <DbgHelp.h>
 #elif defined(linux)
 #include <unistd.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #include <execinfo.h>
 #endif
@@ -32,6 +33,7 @@
 #define SLOG_MUTEX CRITICAL_SECTION 
 #elif defined(linux)
 #define PROC_HANDLE void *
+#define SLOG_MUTEX pthread_mutex_t
 #endif
 
 typedef struct _logger_cfg {
@@ -50,6 +52,7 @@ static void _slog_init_mutex(SLOG_MUTEX *mtx)
 #if defined(WIN32)
     InitializeCriticalSection(mtx);
 #elif defined(linux)
+    pthread_mutex_init(mtx, NULL);
 #endif
 }
 
@@ -58,6 +61,7 @@ static void _slog_lock(SLOG_MUTEX *mtx)
 #if defined(WIN32)
     EnterCriticalSection(mtx);
 #elif defined(linux)
+    pthread_mutex_lock(mtx);
 #endif
 }
 
@@ -66,6 +70,7 @@ static void _slog_unlock(SLOG_MUTEX *mtx)
 #if defined(WIN32)
     LeaveCriticalSection(mtx);
 #elif defined(linux)
+    pthread_mutex_unlock(mtx);
 #endif
 }
 

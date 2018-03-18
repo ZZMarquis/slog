@@ -6,8 +6,9 @@ A very simple pure C log library
 1. Supported C89
 2. Supported Windows and Linux
 3. Supported log stacktrace
-4. Not asynchronous
-5. Not thread-safe
+4. thread-safe
+
+5. Not asynchronous
 
 ------------------------------
 

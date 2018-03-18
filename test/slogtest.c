@@ -4,6 +4,8 @@
 #include <Windows.h>
 #include <process.h>
 #elif defined(linux)
+#include <pthread.h>
+#include <unistd.h>
 #endif
 
 #include "slog.h"
@@ -26,7 +28,6 @@ static void _test_log()
     SLOG_TRACE("this is trace log, %s, %d", "test", 123123);
 }
 
-
 static volatile int g_stop = 0;
 #if defined(WIN32)
 static unsigned int __stdcall _do_multithread_test(void *param)
@@ -35,18 +36,38 @@ static unsigned int __stdcall _do_multithread_test(void *param)
         _test_log();
         _test_st_log();
     }
+    return 0;
 }
 #elif defined(linux)
+static void *_do_multithread_test(void *param)
+{
+    while (1 != g_stop) {
+        _test_log();
+        _test_st_log();
+    }
+    return NULL;
+}
 #endif
 
 static void _test_multithread()
 {
 #define THREAD_COUNT             (10)
+#define TEST_TIME                (30)
     int i = 0;
+
+#if defined(WIN32)
     for (i = 0; i < THREAD_COUNT; ++i) {
         _beginthreadex(NULL, 0, _do_multithread_test, NULL, 0, NULL);
     }
-    Sleep(1000 * 30);
+    Sleep(1000 * TEST_TIME);
+#elif defined(linux)
+    pthread_t ptt;
+    for (i = 0; i < THREAD_COUNT; ++i) {
+        pthread_create(&ptt, NULL, _do_multithread_test, NULL);
+    }
+    sleep(TEST_TIME);
+#endif
+
     g_stop = 1;
 }
 
