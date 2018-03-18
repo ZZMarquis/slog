@@ -14,11 +14,11 @@
 #endif
 
 typedef enum _slog_level {
-	S_TRACE = 1,
-	S_DEBUG = 2,
-	S_INFO = 3,
-	S_WARN = 4,
-	S_ERROR = 5
+    S_TRACE = 1,
+    S_DEBUG = 2,
+    S_INFO = 3,
+    S_WARN = 4,
+    S_ERROR = 5
 } slog_level;
 
 int init_logger(const char *log_dir, slog_level level);
