@@ -1,4 +1,11 @@
 #include <stdio.h>
+
+#if defined(WIN32)
+#include <Windows.h>
+#include <process.h>
+#elif defined(linux)
+#endif
+
 #include "slog.h"
 
 static void _test_st_log()
@@ -19,6 +26,31 @@ static void _test_log()
     SLOG_TRACE("this is trace log, %s, %d", "test", 123123);
 }
 
+
+static volatile int g_stop = 0;
+#if defined(WIN32)
+static unsigned int __stdcall _do_multithread_test(void *param)
+{
+    while (1 != g_stop) {
+        _test_log();
+        _test_st_log();
+    }
+}
+#elif defined(linux)
+#endif
+
+static void _test_multithread()
+{
+#define THREAD_COUNT             (10)
+    int i = 0;
+    for (i = 0; i < THREAD_COUNT; ++i) {
+        _beginthreadex(NULL, 0, _do_multithread_test, NULL, 0, NULL);
+    }
+    Sleep(1000 * 30);
+    g_stop = 1;
+}
+
+#define DO_MULTITHREAD_TEST            (1)
 int main(int argc, char **argv)
 {
     if (init_logger("./logs", S_DEBUG) != TRUE) {
@@ -26,8 +58,17 @@ int main(int argc, char **argv)
         goto end;
     }
 
+    printf("test begin...\n");
+
     _test_log();
     _test_st_log();
+
+#if defined(DO_MULTITHREAD_TEST)
+    printf("do multithread test...\n");
+    _test_multithread();
+    printf("multithread over \n");
+#endif
+
 
     printf("test over \n");
 

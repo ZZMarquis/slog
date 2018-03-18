@@ -6,7 +6,7 @@ FILE(GLOB SLOG_SRC src/*.c src/*.h)
 IF(WIN32)
 	SET(SLOG_DPEND Dbghelp)
 ELSEIF(UNIX)
-	SET(SLOG_DPEND )
+	SET(SLOG_DPEND pthread)
 ENDIF()
 
 SET(LIB_NAME slog)
