@@ -13,6 +13,10 @@
 #define FALSE        (0)
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum _slog_level {
     S_TRACE = 1,
     S_DEBUG = 2,
@@ -35,5 +39,9 @@ void write_log(slog_level level, int print_stacktrace, const char *func_name, in
 #define SLOG_INFO(fmt, ...) write_log(S_INFO, FALSE, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
 #define SLOG_DEBUG(fmt, ...) write_log(S_DEBUG, FALSE, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
 #define SLOG_TRACE(fmt, ...) write_log(S_TRACE, FALSE, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // !_S_LOG_H_
