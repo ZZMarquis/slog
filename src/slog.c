@@ -131,9 +131,9 @@ static void _write_stacktrace()
 #if defined(_DEBUG)
     SYMBOL_INFO *symbol = NULL;
 
-	if (NULL == g_logger_cfg.curr_proc) {
-		return;
-	}
+    if (NULL == g_logger_cfg.curr_proc) {
+        return;
+    }
 
     frames = CaptureStackBackTrace(INNER_DEEP, MAX_DEEP, stack, NULL);
     symbol = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + sizeof(char) * MAX_ST_INFO, 1);
@@ -181,11 +181,11 @@ static int _get_curr_proc_handle()
         return FALSE;
     }
     if (SymInitialize(g_logger_cfg.curr_proc, NULL, TRUE) != TRUE) {
-		g_logger_cfg.curr_proc = NULL;
+        g_logger_cfg.curr_proc = NULL;
         return FALSE;
     }
 #else
-	g_logger_cfg.curr_proc = NULL;
+    g_logger_cfg.curr_proc = NULL;
 #endif
 #elif defined(linux)
     g_logger_cfg.curr_proc = NULL;
@@ -210,7 +210,7 @@ int init_logger(const char *log_dir, slog_level level)
 
     _slog_init_mutex(&g_logger_cfg.mtx);
 
-	_get_curr_proc_handle();
+    _get_curr_proc_handle();
 
     _get_curr_date(sizeof(datestr), datestr);
     snprintf(log_filepath, sizeof(log_filepath) - 1, "%s/%s.log", log_dir, datestr);
