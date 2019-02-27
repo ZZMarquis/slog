@@ -90,7 +90,6 @@ int main(int argc, char **argv)
     printf("multithread over \n");
 #endif
 
-
     printf("test over \n");
 
 end:
